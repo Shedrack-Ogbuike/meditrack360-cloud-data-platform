@@ -1,4 +1,4 @@
-# MediTrack360 Data Platform
+﻿# MediTrack360 Data Platform
 
 ## Architecture
 - Sources: Postgres, API, CSV, Kafka
@@ -18,3 +18,6 @@
    http://localhost:8080
 4. Trigger DAG:
    `meditrack360_end_to_end`
+
+## Project
+Cloud-native healthcare data platform with end-to-end ETL pipelines following Bronze–Silver–Gold lakehouse architecture.
