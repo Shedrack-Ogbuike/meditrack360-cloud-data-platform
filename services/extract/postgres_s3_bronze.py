@@ -10,10 +10,10 @@ from sqlalchemy import create_engine
 # 1) Postgres connection (Supabase)
 # -----------------------------
 PG_USER = "medi_reader.hceprxhtdgtbqmrfwymn"
-PG_PWD  = "medi_reader123"  # rotate + move to .env later
+PG_PWD = "medi_reader123"  # rotate + move to .env later
 PG_HOST = "aws-1-eu-central-1.pooler.supabase.com"
 PG_PORT = 5432
-PG_DB   = "postgres"
+PG_DB = "postgres"
 
 engine = create_engine(
     f"postgresql+psycopg2://{PG_USER}:{PG_PWD}@{PG_HOST}:{PG_PORT}/{PG_DB}",
@@ -36,10 +36,10 @@ run_id = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
 # 3) Extract tables
 # -----------------------------
 tables = {
-    "patients":   'SELECT * FROM public.patients',
-    "admissions": 'SELECT * FROM public.admissions',
-    "discharges": 'SELECT * FROM public.discharges',
-    "wards":      'SELECT * FROM public.wards',
+    "patients": "SELECT * FROM public.patients",
+    "admissions": "SELECT * FROM public.admissions",
+    "discharges": "SELECT * FROM public.discharges",
+    "wards": "SELECT * FROM public.wards",
 }
 
 # -----------------------------

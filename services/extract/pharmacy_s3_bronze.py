@@ -7,10 +7,10 @@ from datetime import datetime
 # 1. Extract
 url = "https://raw.githubusercontent.com/RofiatAbdulkareem/data-repo/refs/heads/main/data/pharmacy_inventory.json"
 data = requests.get(url).json()
-df = pd.DataFrame(data['drugs'])
+df = pd.DataFrame(data["drugs"])
 
 # 2. Upload to S3
-s3 = boto3.client('s3', region_name='us-east-2')
+s3 = boto3.client("s3", region_name="us-east-2")
 bucket = "meditrack360-data-lake-6065273c"
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 key = f"bronze/pharmacy/pharmacy_{timestamp}.csv"
