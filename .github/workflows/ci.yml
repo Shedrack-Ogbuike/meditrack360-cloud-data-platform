@@ -38,7 +38,7 @@ jobs:
           if [ -d "airflow" ]; then
             ls -la airflow/
           else
-            echo "❌ No airflow directory found"
+            echo " No airflow directory found"
             exit 1
           fi
 
@@ -56,18 +56,18 @@ jobs:
         run: |
           echo "Compiling all .py files under airflow/ ..."
           find airflow -name "*.py" -print -exec python -m py_compile {} \;
-          echo "✅ All Python files have valid syntax"
+          echo " All Python files have valid syntax"
 
       - name: Basic import smoke test (fails if missing deps)
         run: |
           python -c "import pandas, boto3, requests, sqlalchemy"
-          echo "✅ Base imports OK"
+          echo " Base imports OK"
 
       - name: DAG file presence check
         run: |
           if [ -f "airflow/dags/meditrack_dag.py" ]; then
-            echo "✅ Found DAG: airflow/dags/meditrack_dag.py"
+            echo " Found DAG: airflow/dags/meditrack_dag.py"
           else
-            echo "⚠️ DAG not found at airflow/dags/meditrack_dag.py"
+            echo " DAG not found at airflow/dags/meditrack_dag.py"
             echo "If your DAG has a different name/path, update this check."
           fi

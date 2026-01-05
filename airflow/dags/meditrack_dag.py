@@ -111,15 +111,12 @@ def extract_lab_to_bronze():
             s3_client = boto3.client("s3", region_name="us-east-2")
             bucket = "meditrack360-data-lake-6065273c"
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            key = f"bronze/lab_results/{
-                datetime.now().strftime('%Y/%m/%d')}/lab_results_{timestamp}.parquet"
+            key = f"bronze/lab_results/{datetime.now().strftime('%Y/%m/%d')}/lab_results_{timestamp}.parquet"
 
             s3_client.put_object(Bucket=bucket, Key=key, Body=buffer.getvalue())
 
             print(
-                f" Uploaded {
-                    len(combined_df)} rows to S3: s3://{bucket}/{key}"
-            )
+                f" Uploaded {len(combined_df)} rows to S3: s3://{bucket}/{key}")
             return f"Lab extraction: {len(combined_df)} rows to {key}"
 
         except Exception as s3_error:
