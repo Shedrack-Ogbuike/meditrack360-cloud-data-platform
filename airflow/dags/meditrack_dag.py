@@ -50,11 +50,6 @@ dag = DAG(
 
 def extract_lab_to_bronze():
     """Extract lab results from CSV files to S3 bronze - WORKING VERSION"""
-    import pandas as pd
-    import boto3
-    import io
-    import os
-    from datetime import datetime
     import warnings
 
     warnings.filterwarnings("ignore")
@@ -62,12 +57,8 @@ def extract_lab_to_bronze():
     print("Starting lab results extraction...")
 
     try:
-        windows_path = (
-            "C:\\Users\\user\\Desktop\\MediTrack360\\services\\extract\\lab_results"
-        )
-        csv_files = [
-            f"{windows_path}\\lab_results_2025-11-{i:02d}.csv" for i in range(1, 11)
-        ]
+        windows_path = ("C:\\Users\\user\\Desktop\\MediTrack360\\services\\extract\\lab_results")
+        csv_files = [f"{windows_path}\\lab_results_2025-11-{i:02d}.csv" for i in range(1, 11)]
 
         print(f"Looking for files at: {windows_path}")
 
@@ -84,9 +75,7 @@ def extract_lab_to_bronze():
 
         if not dataframes:
             docker_path = "/opt/airflow/data/lab_results"
-            csv_files = [
-                f"{docker_path}/lab_results_2025-11-{i:02d}.csv" for i in range(1, 11)
-            ]
+            csv_files = [f"{docker_path}/lab_results_2025-11-{i:02d}.csv" for i in range(1, 11)]
             print(f"Trying Docker path: {docker_path}")
 
             for f in csv_files:
@@ -170,8 +159,8 @@ def extract_pharmacy_to_bronze():
             "s3",
             aws_access_key_id=aws_key,
             aws_secret_access_key=aws_secret,
-            region_name=os.getenv("AWS_REGION", "us-east-2"),
-        )
+            region_name=os.getenv("AWS_REGION", "us-east-2"),)
+        
         bucket = "meditrack360-data-lake-6065273c"
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         key = f"bronze/pharmacy/pharmacy_{timestamp}.csv"
@@ -220,17 +209,14 @@ def extract_postgres_to_bronze():
         print(f"Connecting to Postgres: {PG_HOST}")
 
         # Create connection string
-        connection_string = (
-            f"postgresql+psycopg2://{PG_USER}:{PG_PWD}@{PG_HOST}:{PG_PORT}/{PG_DB}"
-        )
+        connection_string = (f"postgresql+psycopg2://{PG_USER}:{PG_PWD}@{PG_HOST}:{PG_PORT}/{PG_DB}")
 
         engine = create_engine(
             connection_string,
             connect_args={"sslmode": "require"},
             pool_pre_ping=True,
             pool_size=5,
-            max_overflow=10,
-        )
+            max_overflow=10,)
 
         AWS_REGION = "eu-central-1"
         S3_BUCKET = "meditrack360-data-lake-6065273c"
@@ -241,8 +227,8 @@ def extract_postgres_to_bronze():
             "s3",
             aws_access_key_id=aws_key,
             aws_secret_access_key=aws_secret,
-            region_name=AWS_REGION,
-        )
+            region_name=AWS_REGION,)
+        
         run_id = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
 
         # Tables to extract
@@ -271,9 +257,7 @@ def extract_postgres_to_bronze():
                 key = f"{BRONZE_PREFIX}/{name}/dt={run_id}/{name}.csv"
 
                 try:
-                    s3.put_object(
-                        Bucket=S3_BUCKET, Key=key, Body=buf.getvalue().encode("utf-8")
-                    )
+                    s3.put_object(Bucket=S3_BUCKET, Key=key, Body=buf.getvalue().encode("utf-8"))
                     print(f"   Uploaded to s3://{S3_BUCKET}/{key}")
                 except Exception as s3_error:
                     print(f"  ⚠️ S3 upload failed: {s3_error}")
@@ -291,10 +275,7 @@ def extract_postgres_to_bronze():
         engine.dispose()
 
         if extracted_tables:
-            print(
-                f" Extracted {
-                    len(extracted_tables)} tables with {total_rows} total rows"
-            )
+            print(f" Extracted {len(extracted_tables)} tables with {total_rows} total rows")
             return f"Postgres extraction: {total_rows} rows from {len(extracted_tables)} tables"
         else:
             raise Exception("Failed to extract any PostgreSQL tables")
@@ -361,8 +342,7 @@ def bronze_to_silver_transformation():
             import importlib.util
 
             spec = importlib.util.spec_from_file_location(
-                "bronze_to_silver", script_path
-            )
+                "bronze_to_silver", script_path)
             module = importlib.util.module_from_spec(spec)
 
             # Set environment variables for the script
@@ -436,12 +416,7 @@ def test_aws_credentials():
         print(f" AWS Access Key: ***{aws_key[-4:]}")
         print(f" AWS Secret: ***{aws_secret[-4:]}")
         print(f" AWS Region: {os.getenv('AWS_REGION', 'us-east-2')}")
-        print(
-            f" S3 Bucket: {
-                os.getenv(
-                    'S3_BUCKET',
-                    'meditrack360-data-lake-6065273c')}"
-        )
+        print(f" S3 Bucket: {os.getenv('S3_BUCKET', 'meditrack360-data-lake-6065273c')}")
         return "AWS credentials found"
     else:
         print(" AWS credentials NOT FOUND in environment variables")
@@ -459,66 +434,56 @@ start = DummyOperator(task_id="start_pipeline", dag=dag)
 test_aws = PythonOperator(
     task_id="test_aws_credentials",
     python_callable=test_aws_credentials,
-    dag=dag,
-)
+    dag=dag,)
 
 # Extract tasks
 extract_lab = PythonOperator(
     task_id="extract_lab_to_bronze",
     python_callable=extract_lab_to_bronze,
-    dag=dag,
-)
+    dag=dag,)
 
 extract_pharmacy = PythonOperator(
     task_id="extract_pharmacy_to_bronze",
     python_callable=extract_pharmacy_to_bronze,
-    dag=dag,
-)
+    dag=dag,)
 
 extract_postgres = PythonOperator(
     task_id="extract_postgres_to_bronze",
     python_callable=extract_postgres_to_bronze,
-    dag=dag,
-)
+    dag=dag,)
 
 # Validation tasks
 validate_postgres = PythonOperator(
     task_id="validate_postgres_data",
     python_callable=validate_postgres_data,
-    dag=dag,
-)
+    dag=dag,)
 
 validate_pharmacy = PythonOperator(
     task_id="validate_pharmacy_data",
     python_callable=validate_pharmacy_data,
-    dag=dag,
-)
+    dag=dag,)
 
 validate_lab = PythonOperator(
     task_id="validate_lab_data",
     python_callable=validate_lab_data,
-    dag=dag,
-)
+    dag=dag,)
 
 # Transformation tasks
 bronze_to_silver = PythonOperator(
     task_id="bronze_to_silver_transformation",
     python_callable=bronze_to_silver_transformation,
-    dag=dag,
-)
+    dag=dag,)
 
 silver_to_gold = PythonOperator(
     task_id="silver_to_gold_transformation",
     python_callable=silver_to_gold_transformation,
-    dag=dag,
-)
+    dag=dag,)
 
 # Quality check
 quality_check = BashOperator(
     task_id="quality_check",
     bash_command='echo "✅ Pipeline completed at $(date)"',
-    dag=dag,
-)
+    dag=dag,)
 
 end = DummyOperator(task_id="end_pipeline", dag=dag)
 
