@@ -1,11 +1,10 @@
 # requirements.txt
-apache-airflow[celery,postgres,redis]==2.9.3
-apache-airflow-providers-amazon==8.13.0
-apache-airflow-providers-apache-spark==4.5.0
-apache-airflow-providers-docker==3.8.0
-pyspark==3.5.1
-delta-spark==2.4.0
+apache-airflow-providers-apache-spark==4.4.0
+apache-airflow-providers-amazon==8.8.0
 boto3==1.34.0
-pandas==2.2.0
-numpy==1.24.0
+pandas==2.1.4
+great-expectations==0.18.0
+pyspark==3.5.0
+pyarrow==12.0.1
+apache-airflow-providers-docker==3.8.0
 python-dotenv==1.0.0
