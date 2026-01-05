@@ -1,0 +1,73 @@
+name: MediTrack360 CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "airflow/**"
+      - ".github/workflows/**"
+      - "requirements.txt"
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            python -m pip install -r requirements.txt
+          fi
+          python -m pip install black==24.8.0 flake8==7.0.0
+
+      - name: Show repository structure (debug)
+        run: |
+          echo "Repo root:"
+          ls -la
+          echo ""
+          echo "Airflow folder (if present):"
+          if [ -d "airflow" ]; then
+            ls -la airflow/
+          else
+            echo "❌ No airflow directory found"
+            exit 1
+          fi
+
+      - name: Black format check (fails on issues)
+        run: |
+          echo "Running black --check on airflow/ ..."
+          black --check airflow/
+
+      - name: Flake8 style check (fails on issues)
+        run: |
+          echo "Running flake8 on airflow/ ..."
+          flake8 airflow/ --max-line-length=88 --extend-ignore=E501,W503
+
+      - name: Python syntax compile check (fails on syntax errors)
+        run: |
+          echo "Compiling all .py files under airflow/ ..."
+          find airflow -name "*.py" -print -exec python -m py_compile {} \;
+          echo "✅ All Python files have valid syntax"
+
+      - name: Basic import smoke test (fails if missing deps)
+        run: |
+          python -c "import pandas, boto3, requests, sqlalchemy"
+          echo "✅ Base imports OK"
+
+      - name: DAG file presence check
+        run: |
+          if [ -f "airflow/dags/meditrack_dag.py" ]; then
+            echo "✅ Found DAG: airflow/dags/meditrack_dag.py"
+          else
+            echo "⚠️ DAG not found at airflow/dags/meditrack_dag.py"
+            echo "If your DAG has a different name/path, update this check."
+          fi

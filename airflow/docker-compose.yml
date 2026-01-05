@@ -1,0 +1,105 @@
+﻿version: '3'
+services:
+  # PostgreSQL for Airflow
+  postgres:
+    container_name: airflow-pg
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - medi-track-network
+
+  # Airflow Web Server
+  airflow-web:
+    build: .
+    container_name: airflow-web
+    restart: always
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
+      AIRFLOW__CORE__ENABLE_XCOM_PICKLING: 'true'
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./services:/opt/airflow/services
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./data:/opt/airflow/data
+      - ./requirements.txt:/opt/airflow/requirements.txt  # ADDED
+    ports:
+      - "8080:8080"
+    command: >
+      bash -c "
+      pip install --no-cache-dir -r /opt/airflow/requirements.txt &&
+      airflow webserver
+      "
+    networks:
+      - medi-track-network
+
+  # Airflow Scheduler
+  airflow-scheduler:
+    build: .
+    container_name: airflow-sched
+    restart: always
+    depends_on:
+      - airflow-web
+    env_file:
+      - .env
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      AIRFLOW__CORE__ENABLE_XCOM_PICKLING: 'true'
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./services:/opt/airflow/services
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./data:/opt/airflow/data
+      - ./requirements.txt:/opt/airflow/requirements.txt  # ADDED
+    command: >
+      bash -c "
+      pip install --no-cache-dir -r /opt/airflow/requirements.txt &&
+      airflow scheduler
+      "
+    networks:
+      - medi-track-network
+
+  # Spark Master
+  spark-master:
+    image: apache/spark:3.5.0
+    container_name: spark-master
+    command: bin/spark-class org.apache.spark.deploy.master.Master
+    ports:
+      - "7077:7077"
+      - "8081:8080"
+    networks:
+      - medi-track-network
+
+  # Spark Worker
+  spark-worker:
+    image: apache/spark:3.5.0
+    container_name: spark-worker
+    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    depends_on:
+      - spark-master
+    ports:
+      - "8082:8081"
+    networks:
+      - medi-track-network
+
+volumes:
+  postgres_data:
+
+networks:
+  medi-track-network:
+    driver: bridge

@@ -1,0 +1,52 @@
+# .gitignore
+.env
+.env.*
+*.env
+data/
+logs/
+__pycache__/
+*.pyc
+.DS_Store
+.notebooks
+glue_jobs
+init_airflow.ps1
+plugins
+deploy_prod.yml
+*.env
+*.sql
+
+# Airflow
+airflow/logs/
+airflow/data/
+airflow/output/
+airflow/plugins/
+
+cat >> .gitignore << 'EOF'
+
+# Project-specific exclusions
+airflow/services/config/
+airflow/setup_airflow.ps1
+notebooks/
+services/load/
+services/transform/
+.github/workflows/deploy_prod.yml
+
+# Keep these patterns too
+__pycache__/
+*.py[cod]
+*.so
+.Python
+.env
+*.log
+logs/
+data/
+*.db
+*.sqlite
+
+
+# Local Terraform directories
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform.lock.hcl
