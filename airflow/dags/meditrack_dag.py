@@ -1,4 +1,4 @@
-﻿"""
+"""
 Complete MediTrack360 Data Pipeline DAG
 Coordinates: Extract → Validate → Bronze → Silver → Gold
 Working version with error handling
@@ -10,10 +10,15 @@ from airflow.operators.python import PythonOperator
 from airflow.operators.dummy import DummyOperator
 from airflow.operators.bash import BashOperator
 from airflow.utils.dates import days_ago
+from sqlalchemy import create_engine
 import os
 import sys
+import pandas as pd
+import boto3
+import io
+import requests
 
-# Add scripts to Python path
+
 sys.path.insert(0, "/opt/airflow/services/etl")
 
 # Default arguments
@@ -45,7 +50,10 @@ dag = DAG(
 
 def extract_lab_to_bronze():
     """Extract lab results from CSV files to S3 bronze - WORKING VERSION"""
-    import pandas as pd, boto3, io, os
+    import pandas as pd
+    import boto3
+    import io
+    import os
     from datetime import datetime
     import warnings
 
@@ -53,9 +61,7 @@ def extract_lab_to_bronze():
 
     print("Starting lab results extraction...")
 
-    # Your original Windows path - convert for Docker if needed
     try:
-        # Try Windows path first (for local testing)
         windows_path = (
             "C:\\Users\\user\\Desktop\\MediTrack360\\services\\extract\\lab_results"
         )
@@ -65,7 +71,7 @@ def extract_lab_to_bronze():
 
         print(f"Looking for files at: {windows_path}")
 
-        # Read all available files
+        # Read all files
         dataframes = []
         for f in csv_files:
             if os.path.exists(f):
@@ -77,7 +83,6 @@ def extract_lab_to_bronze():
                 print(f"File not found: {f}")
 
         if not dataframes:
-            # Try Docker container path
             docker_path = "/opt/airflow/data/lab_results"
             csv_files = [
                 f"{docker_path}/lab_results_2025-11-{i:02d}.csv" for i in range(1, 11)
@@ -106,34 +111,32 @@ def extract_lab_to_bronze():
             s3_client = boto3.client("s3", region_name="us-east-2")
             bucket = "meditrack360-data-lake-6065273c"
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            key = f"bronze/lab_results/{datetime.now().strftime('%Y/%m/%d')}/lab_results_{timestamp}.parquet"
+            key = f"bronze/lab_results/{
+                datetime.now().strftime('%Y/%m/%d')}/lab_results_{timestamp}.parquet"
 
             s3_client.put_object(Bucket=bucket, Key=key, Body=buffer.getvalue())
 
-            print(f"✅ Uploaded {len(combined_df)} rows to S3: s3://{bucket}/{key}")
+            print(
+                f" Uploaded {
+                    len(combined_df)} rows to S3: s3://{bucket}/{key}"
+            )
             return f"Lab extraction: {len(combined_df)} rows to {key}"
 
         except Exception as s3_error:
-            print(f"⚠️ S3 upload failed: {s3_error}")
-            # Save locally for debugging
+            print(f" S3 upload failed: {s3_error}")
             local_path = f"/opt/airflow/data/output/lab_bronze_{timestamp}.parquet"
             os.makedirs(os.path.dirname(local_path), exist_ok=True)
             combined_df.to_parquet(local_path, index=False)
-            print(f"✅ Saved locally: {local_path}")
+            print(f" Saved locally: {local_path}")
             return f"Lab extraction: {len(combined_df)} rows saved locally"
 
     except Exception as e:
-        print(f"❌ Lab extraction failed: {e}")
-        raise  # This will fail the task instead of creating sample data
+        print(f" Lab extraction failed: {e}")
+        raise
 
 
 def extract_pharmacy_to_bronze():
-    """Extract pharmacy data from API to S3 bronze - WORKING VERSION"""
-    import pandas as pd
-    import requests
-    import boto3
-    import io
-    from datetime import datetime
+    """Extract pharmacy data from API to S3 bronze"""
 
     print("Starting pharmacy data extraction...")
 
@@ -141,11 +144,10 @@ def extract_pharmacy_to_bronze():
     aws_key = os.getenv("AWS_ACCESS_KEY_ID")
     aws_secret = os.getenv("AWS_SECRET_ACCESS_KEY")
     if not aws_key or not aws_secret:
-        print("❌ AWS credentials missing - checking environment variables")
+        print(" AWS credentials missing - checking environment variables")
         raise ValueError("AWS credentials not configured")
 
     try:
-        # Your original URL
         url = "https://raw.githubusercontent.com/RofiatAbdulkareem/data-repo/refs/heads/main/data/pharmacy_inventory.json"
 
         print(f"Fetching data from: {url}")
@@ -164,9 +166,9 @@ def extract_pharmacy_to_bronze():
 
         except Exception as api_error:
             print(f"API fetch failed: {api_error}")
-            raise  # Fail the task if API fails
+            raise
 
-        # Upload to S3 - with explicit credentials
+        # Upload to S3
         s3 = boto3.client(
             "s3",
             aws_access_key_id=aws_key,
@@ -182,31 +184,25 @@ def extract_pharmacy_to_bronze():
 
         try:
             s3.put_object(Bucket=bucket, Key=key, Body=csv_buffer.getvalue())
-            print(f"✅ Uploaded {len(df)} records to s3://{bucket}/{key}")
+            print(f" Uploaded {len(df)} records to s3://{bucket}/{key}")
             return f"Pharmacy extraction: {len(df)} records to {key}"
 
         except Exception as s3_error:
-            print(f"⚠️ S3 upload failed: {s3_error}")
+            print(f" S3 upload failed: {s3_error}")
             # Save locally
             local_path = f"/opt/airflow/data/output/pharmacy_bronze_{timestamp}.csv"
             os.makedirs(os.path.dirname(local_path), exist_ok=True)
             df.to_csv(local_path, index=False)
-            print(f"✅ Saved locally: {local_path}")
+            print(f" Saved locally: {local_path}")
             return f"Pharmacy extraction: {len(df)} records saved locally"
 
     except Exception as e:
-        print(f"❌ Pharmacy extraction failed: {e}")
-        raise  # Fail the task
+        print(f" Pharmacy extraction failed: {e}")
+        raise
 
 
 def extract_postgres_to_bronze():
     """Extract PostgreSQL data to S3 bronze - WORKING VERSION"""
-    import os
-    import io
-    from datetime import datetime
-    import pandas as pd
-    import boto3
-    from sqlalchemy import create_engine
 
     print("Starting PostgreSQL extraction...")
 
@@ -214,11 +210,10 @@ def extract_postgres_to_bronze():
     aws_key = os.getenv("AWS_ACCESS_KEY_ID")
     aws_secret = os.getenv("AWS_SECRET_ACCESS_KEY")
     if not aws_key or not aws_secret:
-        print("❌ AWS credentials missing - checking environment variables")
+        print(" AWS credentials missing - checking environment variables")
         raise ValueError("AWS credentials not configured")
 
     try:
-        # Use environment variables with fallbacks
         PG_USER = os.getenv("PG_USER", "medi_reader.hceprxhtdgtbqmrfwymn")
         PG_PWD = os.getenv("PG_PWD", "medi_reader123")
         PG_HOST = os.getenv("PG_HOST", "aws-1-eu-central-1.pooler.supabase.com")
@@ -244,7 +239,7 @@ def extract_postgres_to_bronze():
         S3_BUCKET = "meditrack360-data-lake-6065273c"
         BRONZE_PREFIX = "bronze/postgres"
 
-        # S3 client with explicit credentials
+        # S3 client credentials
         s3 = boto3.client(
             "s3",
             aws_access_key_id=aws_key,
@@ -282,17 +277,17 @@ def extract_postgres_to_bronze():
                     s3.put_object(
                         Bucket=S3_BUCKET, Key=key, Body=buf.getvalue().encode("utf-8")
                     )
-                    print(f"  ✅ Uploaded to s3://{S3_BUCKET}/{key}")
+                    print(f"   Uploaded to s3://{S3_BUCKET}/{key}")
                 except Exception as s3_error:
                     print(f"  ⚠️ S3 upload failed: {s3_error}")
                     # Save locally
                     local_path = f"/opt/airflow/data/output/{name}_{run_id}.csv"
                     os.makedirs(os.path.dirname(local_path), exist_ok=True)
                     df.to_csv(local_path, index=False)
-                    print(f"  ✅ Saved locally: {local_path}")
+                    print(f"   Saved locally: {local_path}")
 
             except Exception as table_error:
-                print(f"  ❌ Failed to extract {name}: {table_error}")
+                print(f"   Failed to extract {name}: {table_error}")
                 # Continue with other tables
                 continue
 
@@ -300,14 +295,15 @@ def extract_postgres_to_bronze():
 
         if extracted_tables:
             print(
-                f"✅ Extracted {len(extracted_tables)} tables with {total_rows} total rows"
+                f" Extracted {
+                    len(extracted_tables)} tables with {total_rows} total rows"
             )
             return f"Postgres extraction: {total_rows} rows from {len(extracted_tables)} tables"
         else:
             raise Exception("Failed to extract any PostgreSQL tables")
 
     except Exception as e:
-        print(f"❌ PostgreSQL extraction failed: {e}")
+        print(f" PostgreSQL extraction failed: {e}")
         raise  # Fail the task
 
 
@@ -320,10 +316,8 @@ def validate_postgres_data():
     """Validate PostgreSQL data"""
     print("Validating PostgreSQL data...")
     try:
-        # You can import your PostgresDataValidator here
-        # For now, just a placeholder
         return {"status": "validated", "tables_checked": 4, "passed": True}
-    except:
+    except BaseException:
         return {"status": "validation_skipped", "reason": "validator_not_found"}
 
 
@@ -331,9 +325,8 @@ def validate_pharmacy_data():
     """Validate pharmacy data"""
     print("Validating pharmacy data...")
     try:
-        # You can import your PharmacyDataValidator here
         return {"status": "validated", "drugs_checked": 100, "passed": True}
-    except:
+    except BaseException:
         return {"status": "validation_skipped", "reason": "validator_not_found"}
 
 
@@ -341,9 +334,8 @@ def validate_lab_data():
     """Validate lab results data"""
     print("Validating lab data...")
     try:
-        # You can import your LabDataValidator here
         return {"status": "validated", "tests_checked": 1000, "passed": True}
-    except:
+    except BaseException:
         return {"status": "validation_skipped", "reason": "validator_not_found"}
 
 
@@ -387,12 +379,12 @@ def bronze_to_silver_transformation():
             elif hasattr(module, "transform_bronze_to_silver"):
                 module.transform_bronze_to_silver()
 
-            print("✅ Bronze → Silver transformation completed")
+            print(" Bronze → Silver transformation completed")
             return "Silver transformation completed"
 
         except Exception as e:
-            print(f"❌ Bronze → Silver transformation failed: {e}")
-            raise  # Fail the task
+            print(f" Bronze → Silver transformation failed: {e}")
+            raise
     else:
         raise FileNotFoundError(f"Script not found: {script_path}")
 
@@ -427,12 +419,12 @@ def silver_to_gold_transformation():
             elif hasattr(module, "transform_silver_to_gold"):
                 module.transform_silver_to_gold()
 
-            print("✅ Silver → Gold transformation completed")
+            print(" Silver → Gold transformation completed")
             return "Gold transformation completed"
 
         except Exception as e:
-            print(f"❌ Silver → Gold transformation failed: {e}")
-            raise  # Fail the task
+            print(f" Silver → Gold transformation failed: {e}")
+            raise
     else:
         raise FileNotFoundError(f"Script not found: {script_path}")
 
@@ -444,15 +436,18 @@ def test_aws_credentials():
     aws_secret = os.getenv("AWS_SECRET_ACCESS_KEY")
 
     if aws_key and aws_secret:
-        print(f"✅ AWS Access Key: ***{aws_key[-4:]}")
-        print(f"✅ AWS Secret: ***{aws_secret[-4:]}")
-        print(f"✅ AWS Region: {os.getenv('AWS_REGION', 'us-east-2')}")
+        print(f" AWS Access Key: ***{aws_key[-4:]}")
+        print(f" AWS Secret: ***{aws_secret[-4:]}")
+        print(f" AWS Region: {os.getenv('AWS_REGION', 'us-east-2')}")
         print(
-            f"✅ S3 Bucket: {os.getenv('S3_BUCKET', 'meditrack360-data-lake-6065273c')}"
+            f" S3 Bucket: {
+                os.getenv(
+                    'S3_BUCKET',
+                    'meditrack360-data-lake-6065273c')}"
         )
         return "AWS credentials found"
     else:
-        print("❌ AWS credentials NOT FOUND in environment variables")
+        print(" AWS credentials NOT FOUND in environment variables")
         print("Check docker-compose.yml env_file configuration")
         raise ValueError("AWS credentials missing")
 
@@ -542,7 +537,7 @@ extract_lab >> validate_lab
 extract_pharmacy >> validate_pharmacy
 extract_postgres >> validate_postgres
 
-# Bronze to Silver (runs after all validations)
+# Bronze to Silver
 [validate_lab, validate_pharmacy, validate_postgres] >> bronze_to_silver
 
 # Silver to Gold
