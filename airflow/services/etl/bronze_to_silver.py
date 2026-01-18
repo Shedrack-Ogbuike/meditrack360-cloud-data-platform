@@ -46,12 +46,10 @@ def main():
     # -------------------------
     labs = spark.read.parquet(bronze_labs)
 
-    
     if "sample_time" in labs.columns:
         labs = labs.withColumn("sample_datetime", F.to_timestamp("sample_time"))
     if "completed_time" in labs.columns:
         labs = labs.withColumn("completed_datetime", F.to_timestamp("completed_time"))
-
 
     if "collected_time" not in labs.columns:
         if "sample_datetime" in labs.columns:
