@@ -46,14 +46,13 @@ def main():
     # -------------------------
     labs = spark.read.parquet(bronze_labs)
 
-    # Keep your logic, add safe timestamp normalization so Gold can compute turnaround
+    
     if "sample_time" in labs.columns:
         labs = labs.withColumn("sample_datetime", F.to_timestamp("sample_time"))
     if "completed_time" in labs.columns:
         labs = labs.withColumn("completed_datetime", F.to_timestamp("completed_time"))
 
-    # OPTIONAL: create a stable "collected_time" alias (your Gold uses collected_time)
-    # This does NOT remove anything, just adds a compatible column if missing.
+
     if "collected_time" not in labs.columns:
         if "sample_datetime" in labs.columns:
             labs = labs.withColumn("collected_time", F.col("sample_datetime"))
@@ -62,7 +61,7 @@ def main():
         else:
             labs = labs.withColumn("collected_time", F.current_timestamp())
 
-    # Turnaround hours (your original)
+    # Turnaround hours
     if "sample_datetime" in labs.columns and "completed_datetime" in labs.columns:
         labs = labs.withColumn(
             "turnaround_hours",
@@ -79,7 +78,7 @@ def main():
         labs = labs.withColumn("test_date", F.to_date("sample_datetime"))
 
     labs.write.mode("overwrite").parquet(f"{silver_base}/lab_results")
-    print("✅ Wrote silver/lab_results")
+    print(" Wrote silver/lab_results")
 
     # -------------------------
     # 2) PHARMACY (csv)
@@ -99,7 +98,6 @@ def main():
     if "expiry_date" in pharmacy.columns:
         pharmacy = pharmacy.withColumn("expiry_date", F.to_date("expiry_date"))
 
-    # OPTIONAL: add aliases used in your current Gold (current_stock, threshold)
     if "current_stock" not in pharmacy.columns and "stock_on_hand" in pharmacy.columns:
         pharmacy = pharmacy.withColumn("current_stock", F.col("stock_on_hand"))
     if "threshold" not in pharmacy.columns and "reorder_level" in pharmacy.columns:
@@ -173,7 +171,7 @@ def main():
     print("✅ Wrote silver/patients admissions discharges wards patient_admissions")
 
     spark.stop()
-    print("🎉 Bronze → Silver complete")
+    print(" Bronze → Silver complete")
 
 
 if __name__ == "__main__":

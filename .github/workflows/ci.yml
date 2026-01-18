@@ -71,3 +71,15 @@ jobs:
             echo " DAG not found at airflow/dags/meditrack_dag.py"
             echo "If your DAG has a different name/path, update this check."
           fi
+
+      #- name: Trigger Airflow DAG
+       # if: github.ref == 'refs/heads/main'
+        #env:
+        # AIRFLOW_USER: ${{ secrets.AIRFLOW_USER }}
+        #  AIRFLOW_PASSWORD: ${{ secrets.AIRFLOW_PASSWORD }}
+        #run: |
+        #  echo "Triggering Airflow DAG meditrack_dag ..."
+        #  curl -X POST "http://localhost:8080/api/v1/dags/meditrack_dag/dagRuns" \
+        #       -H "Content-Type: application/json" \
+        #      -d '{"conf": {}}' \
+        #      -u "${AIRFLOW_USER}:${AIRFLOW_PASSWORD}"

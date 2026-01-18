@@ -16,7 +16,7 @@ USER airflow
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Download Hadoop AWS JARs (these are Java libraries, not Python packages)
+# Download Hadoop AWS JARs 
 RUN mkdir -p /home/airflow/.local/lib/python3.9/site-packages/pyspark/jars && \
     wget -q -P /home/airflow/.local/lib/python3.9/site-packages/pyspark/jars/ \
         https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar \

@@ -35,7 +35,7 @@ services:
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
       - ./data:/opt/airflow/data
-      - ./requirements.txt:/opt/airflow/requirements.txt  # ADDED
+      - ./requirements.txt:/opt/airflow/requirements.txt  
     ports:
       - "8080:8080"
     command: >
@@ -65,7 +65,7 @@ services:
       - ./logs:/opt/airflow/logs
       - ./plugins:/opt/airflow/plugins
       - ./data:/opt/airflow/data
-      - ./requirements.txt:/opt/airflow/requirements.txt  # ADDED
+      - ./requirements.txt:/opt/airflow/requirements.txt  
     command: >
       bash -c "
       pip install --no-cache-dir -r /opt/airflow/requirements.txt &&

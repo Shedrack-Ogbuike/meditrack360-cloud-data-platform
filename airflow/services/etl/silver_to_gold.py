@@ -50,16 +50,16 @@ def transform_silver_to_gold():
         create_simple_dimensions(spark)
         create_simple_facts(spark)
         create_summary_tables(spark)
-        logger.info("✅ Gold transformation completed successfully")
+        logger.info(" Gold transformation completed successfully")
     except Exception as e:
-        logger.error(f"❌ Transformation failed: {str(e)}")
+        logger.error(f" Transformation failed: {str(e)}")
         raise
     finally:
         spark.stop()
 
 
 def create_simple_dimensions(spark):
-    # 1. dim_patient (keep your logic)
+    # 1. dim_patient 
     try:
         patients = spark.read.parquet(get_silver_path("patients"))
         dim_patient = patients.select(
@@ -81,7 +81,7 @@ def create_simple_dimensions(spark):
     except Exception as e:
         logger.error(f"Failed dim_patient: {str(e)}")
 
-    # 2. dim_ward (keep your logic)
+    # 2. dim_ward 
     try:
         wards = spark.read.parquet(get_silver_path("wards"))
         dim_ward = wards.select(
@@ -96,7 +96,7 @@ def create_simple_dimensions(spark):
     except Exception as e:
         logger.error(f"Failed dim_ward: {str(e)}")
 
-    # 3. dim_date (required)
+    # 3. dim_date 
     try:
         dates = spark.sql(
             "SELECT explode(sequence(to_date('2019-01-01'), to_date('2026-12-31'), interval 1 day)) AS d"
@@ -117,7 +117,7 @@ def create_simple_dimensions(spark):
     except Exception as e:
         logger.error(f"Failed dim_date: {str(e)}")
 
-    # 4. dim_drug (required)
+    # 4. dim_drug 
     try:
         pharmacy = spark.read.parquet(get_silver_path("pharmacy_inventory"))
         if "drug_name" in pharmacy.columns:
@@ -138,7 +138,7 @@ def create_simple_dimensions(spark):
 
 
 def create_simple_facts(spark):
-    # 1. fact_admissions (keep your logic)
+    # 1. fact_admissions 
     try:
         admissions = spark.read.parquet(get_silver_path("admissions"))
         fact_admissions = admissions.select(
@@ -159,11 +159,9 @@ def create_simple_facts(spark):
     except Exception as e:
         logger.error(f"Failed fact_admissions: {str(e)}")
 
-    # 2. fact_lab_turnaround (required) + keep your existing fact_labs
+    # 2. fact_lab_turnaround 
     try:
         labs = spark.read.parquet(get_silver_path("lab_results"))
-
-        # keep your existing fact_labs
         fact_labs = labs.select(
             F.monotonically_increasing_id().alias("lab_key"),
             "patient_id",
@@ -175,7 +173,6 @@ def create_simple_facts(spark):
         fact_labs.write.mode("overwrite").parquet(get_gold_path("fact_labs"))
         logger.info(f"Created fact_labs: {fact_labs.count()} rows")
 
-        # required: fact_lab_turnaround
         sample_ts = F.coalesce(
             F.col("sample_datetime"),
             (
@@ -219,7 +216,7 @@ def create_simple_facts(spark):
     except Exception as e:
         logger.error(f"Failed labs facts: {str(e)}")
 
-    # 3. fact_pharmacy_stock (required) + keep your existing fact_pharmacy
+    # 3. fact_pharmacy_stock 
     try:
         pharmacy = spark.read.parquet(get_silver_path("pharmacy_inventory"))
 
@@ -235,7 +232,6 @@ def create_simple_facts(spark):
         fact_pharmacy.write.mode("overwrite").parquet(get_gold_path("fact_pharmacy"))
         logger.info(f"Created fact_pharmacy: {fact_pharmacy.count()} rows")
 
-        # required table name: fact_pharmacy_stock (same content, different name)
         fact_pharmacy.write.mode("overwrite").parquet(
             get_gold_path("fact_pharmacy_stock")
         )
@@ -244,7 +240,7 @@ def create_simple_facts(spark):
     except Exception as e:
         logger.error(f"Failed fact_pharmacy / fact_pharmacy_stock: {str(e)}")
 
-    # 4. fact_icu_alerts (required) - schema-ready empty table
+    # 4. fact_icu_alerts 
     try:
         schema = "alert_id long, patient_id long, alert_time timestamp, alert_type string, severity string, created_at timestamp"
         empty_df = spark.createDataFrame([], schema=schema)
@@ -255,7 +251,7 @@ def create_simple_facts(spark):
 
 
 def create_summary_tables(spark):
-    # 1. Patient admission summary (keep your logic)
+    # 1. Patient admission summary 
     try:
         try:
             fact_admissions = spark.read.parquet(get_gold_path("fact_admissions"))
@@ -290,7 +286,7 @@ def create_summary_tables(spark):
     except Exception as e:
         logger.error(f"Failed patient_summary: {str(e)}")
 
-    # 2. Daily admissions summary (fix your logger formatting so it doesn't break)
+    # 2. Daily admissions summary 
     try:
         fact_admissions = spark.read.parquet(get_gold_path("fact_admissions"))
         daily_summary = (
