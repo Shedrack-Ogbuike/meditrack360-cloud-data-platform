@@ -1,4 +1,4 @@
-﻿"""
+"""
 Postgres Data Validator for MediTrack360
 """
 
@@ -25,10 +25,16 @@ class PostgresDataValidator:
         if run_id is None:
             run_id = f"run_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
 
-        logger.info(f"[PostgresValidator] Validating bronze data - Run ID: {run_id}")
+        logger.info(
+            f"[PostgresValidator] Validating bronze data - Run ID: {run_id}")
 
         # Mock validation - replace with actual validation logic
-        tables = ["patients", "admissions", "wards", "bed_assignments", "vital_signs"]
+        tables = [
+            "patients",
+            "admissions",
+            "wards",
+            "bed_assignments",
+            "vital_signs"]
 
         results = {
             "run_id": run_id,
