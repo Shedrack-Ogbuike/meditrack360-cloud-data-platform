@@ -130,7 +130,9 @@ def create_simple_dimensions(spark):
             dim_drug.write.mode("overwrite").parquet(get_gold_path("dim_drug"))
             logger.info(f"Created dim_drug: {dim_drug.count()} rows")
         else:
-            logger.warning("dim_drug skipped: 'drug_name' missing in silver/pharmacy_inventory")
+            logger.warning(
+                "dim_drug skipped: 'drug_name' missing in silver/pharmacy_inventory"
+            )
     except Exception as e:
         logger.error(f"Failed dim_drug: {str(e)}")
 
@@ -144,11 +146,15 @@ def create_simple_facts(spark):
             "admission_id",
             "patient_id",
             "ward_id",
-            F.coalesce(F.col("admission_time"), F.current_timestamp()).alias("admission_time"),
+            F.coalesce(F.col("admission_time"), F.current_timestamp()).alias(
+                "admission_time"
+            ),
             F.current_timestamp().alias("created_at"),
         ).distinct()
 
-        fact_admissions.write.mode("overwrite").parquet(get_gold_path("fact_admissions"))
+        fact_admissions.write.mode("overwrite").parquet(
+            get_gold_path("fact_admissions")
+        )
         logger.info(f"Created fact_admissions: {fact_admissions.count()} rows")
     except Exception as e:
         logger.error(f"Failed fact_admissions: {str(e)}")
@@ -161,7 +167,9 @@ def create_simple_facts(spark):
         fact_labs = labs.select(
             F.monotonically_increasing_id().alias("lab_key"),
             "patient_id",
-            F.coalesce(F.col("collected_time"), F.current_timestamp()).alias("sample_time"),
+            F.coalesce(F.col("collected_time"), F.current_timestamp()).alias(
+                "sample_time"
+            ),
             F.current_timestamp().alias("created_at"),
         ).distinct()
         fact_labs.write.mode("overwrite").parquet(get_gold_path("fact_labs"))
@@ -170,13 +178,25 @@ def create_simple_facts(spark):
         # required: fact_lab_turnaround
         sample_ts = F.coalesce(
             F.col("sample_datetime"),
-            F.to_timestamp(F.col("sample_time")) if "sample_time" in labs.columns else lit(None),
-            F.to_timestamp(F.col("collected_time")) if "collected_time" in labs.columns else lit(None),
+            (
+                F.to_timestamp(F.col("sample_time"))
+                if "sample_time" in labs.columns
+                else lit(None)
+            ),
+            (
+                F.to_timestamp(F.col("collected_time"))
+                if "collected_time" in labs.columns
+                else lit(None)
+            ),
             F.current_timestamp(),
         )
         completed_ts = F.coalesce(
             F.col("completed_datetime"),
-            F.to_timestamp(F.col("completed_time")) if "completed_time" in labs.columns else lit(None),
+            (
+                F.to_timestamp(F.col("completed_time"))
+                if "completed_time" in labs.columns
+                else lit(None)
+            ),
             F.current_timestamp(),
         )
 
@@ -185,13 +205,15 @@ def create_simple_facts(spark):
             F.col("patient_id"),
             sample_ts.alias("sample_time"),
             completed_ts.alias("completed_time"),
-            ((F.unix_timestamp(completed_ts) - F.unix_timestamp(sample_ts)) / 60.0).alias(
-                "turnaround_minutes"
-            ),
+            (
+                (F.unix_timestamp(completed_ts) - F.unix_timestamp(sample_ts)) / 60.0
+            ).alias("turnaround_minutes"),
             F.current_timestamp().alias("created_at"),
         ).distinct()
 
-        fact_lab_turnaround.write.mode("overwrite").parquet(get_gold_path("fact_lab_turnaround"))
+        fact_lab_turnaround.write.mode("overwrite").parquet(
+            get_gold_path("fact_lab_turnaround")
+        )
         logger.info(f"Created fact_lab_turnaround: {fact_lab_turnaround.count()} rows")
 
     except Exception as e:
@@ -204,7 +226,9 @@ def create_simple_facts(spark):
         fact_pharmacy = pharmacy.select(
             F.monotonically_increasing_id().alias("inventory_key"),
             "drug_name",
-            F.coalesce(F.col("current_stock"), lit(0)).cast("int").alias("stock_on_hand"),
+            F.coalesce(F.col("current_stock"), lit(0))
+            .cast("int")
+            .alias("stock_on_hand"),
             F.coalesce(F.col("threshold"), lit(10)).cast("int").alias("reorder_level"),
             F.current_timestamp().alias("created_at"),
         ).distinct()
@@ -212,7 +236,9 @@ def create_simple_facts(spark):
         logger.info(f"Created fact_pharmacy: {fact_pharmacy.count()} rows")
 
         # required table name: fact_pharmacy_stock (same content, different name)
-        fact_pharmacy.write.mode("overwrite").parquet(get_gold_path("fact_pharmacy_stock"))
+        fact_pharmacy.write.mode("overwrite").parquet(
+            get_gold_path("fact_pharmacy_stock")
+        )
         logger.info(f"Created fact_pharmacy_stock: {fact_pharmacy.count()} rows")
 
     except Exception as e:
@@ -239,10 +265,14 @@ def create_summary_tables(spark):
         except BaseException:
             logger.warning("fact_admissions not found, using dummy admission counts")
             dim_patient = spark.read.parquet(get_gold_path("dim_patient"))
-            patient_admission_counts = dim_patient.select("patient_id", F.lit(1).alias("admission_count"))
+            patient_admission_counts = dim_patient.select(
+                "patient_id", F.lit(1).alias("admission_count")
+            )
 
         dim_patient = spark.read.parquet(get_gold_path("dim_patient"))
-        patient_summary = dim_patient.join(patient_admission_counts, "patient_id", "left").select(
+        patient_summary = dim_patient.join(
+            patient_admission_counts, "patient_id", "left"
+        ).select(
             "patient_key",
             "patient_id",
             "first_name",
@@ -253,7 +283,9 @@ def create_summary_tables(spark):
             F.current_timestamp().alias("created_at"),
         )
 
-        patient_summary.write.mode("overwrite").parquet(get_gold_path("patient_summary"))
+        patient_summary.write.mode("overwrite").parquet(
+            get_gold_path("patient_summary")
+        )
         logger.info(f"Created patient_summary: {patient_summary.count()} rows")
     except Exception as e:
         logger.error(f"Failed patient_summary: {str(e)}")
@@ -262,7 +294,9 @@ def create_summary_tables(spark):
     try:
         fact_admissions = spark.read.parquet(get_gold_path("fact_admissions"))
         daily_summary = (
-            fact_admissions.groupBy(F.date_format("admission_time", "yyyy-MM-dd").alias("admission_date"))
+            fact_admissions.groupBy(
+                F.date_format("admission_time", "yyyy-MM-dd").alias("admission_date")
+            )
             .agg(
                 F.count("*").alias("daily_admissions"),
                 F.countDistinct("patient_id").alias("unique_patients"),
@@ -271,12 +305,16 @@ def create_summary_tables(spark):
             .orderBy("admission_date")
         )
 
-        daily_summary.write.mode("overwrite").parquet(get_gold_path("daily_admissions_summary"))
+        daily_summary.write.mode("overwrite").parquet(
+            get_gold_path("daily_admissions_summary")
+        )
         logger.info(f"Created daily_admissions_summary: {daily_summary.count()} rows")
     except Exception as e:
         logger.error(f"Failed daily_admissions_summary: {str(e)}")
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
     transform_silver_to_gold()

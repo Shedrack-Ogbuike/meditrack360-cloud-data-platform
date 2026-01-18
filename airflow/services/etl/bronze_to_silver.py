@@ -66,7 +66,10 @@ def main():
     if "sample_datetime" in labs.columns and "completed_datetime" in labs.columns:
         labs = labs.withColumn(
             "turnaround_hours",
-            (F.unix_timestamp("completed_datetime") - F.unix_timestamp("sample_datetime"))
+            (
+                F.unix_timestamp("completed_datetime")
+                - F.unix_timestamp("sample_datetime")
+            )
             / 3600.0,
         )
 
@@ -84,10 +87,14 @@ def main():
     pharmacy = read_csv(spark, bronze_pharmacy)
 
     if "stock_on_hand" in pharmacy.columns:
-        pharmacy = pharmacy.withColumn("stock_on_hand", F.col("stock_on_hand").cast("int"))
+        pharmacy = pharmacy.withColumn(
+            "stock_on_hand", F.col("stock_on_hand").cast("int")
+        )
 
     if "reorder_level" in pharmacy.columns:
-        pharmacy = pharmacy.withColumn("reorder_level", F.col("reorder_level").cast("int"))
+        pharmacy = pharmacy.withColumn(
+            "reorder_level", F.col("reorder_level").cast("int")
+        )
 
     if "expiry_date" in pharmacy.columns:
         pharmacy = pharmacy.withColumn("expiry_date", F.to_date("expiry_date"))
@@ -115,9 +122,9 @@ def main():
         patients = patients.withColumn("date_of_birth", F.to_date("dob")).drop("dob")
 
     patients = patients.withColumn("patient_id", F.col("patient_id").cast("long"))
-    patients = patients.withColumn("silver_load_timestamp", F.current_timestamp()).dropDuplicates(
-        ["patient_id"]
-    )
+    patients = patients.withColumn(
+        "silver_load_timestamp", F.current_timestamp()
+    ).dropDuplicates(["patient_id"])
 
     for c in ["admission_time", "admitted_at", "admission_datetime"]:
         if c in admissions.columns:
@@ -129,14 +136,20 @@ def main():
 
     admissions = admissions.withColumn("patient_id", F.col("patient_id").cast("long"))
     if "admission_id" in admissions.columns:
-        admissions = admissions.withColumn("admission_id", F.col("admission_id").cast("long"))
+        admissions = admissions.withColumn(
+            "admission_id", F.col("admission_id").cast("long")
+        )
     if "ward_id" in admissions.columns:
         admissions = admissions.withColumn("ward_id", F.col("ward_id").cast("long"))
 
     if "patient_id" in discharges.columns:
-        discharges = discharges.withColumn("patient_id", F.col("patient_id").cast("long"))
+        discharges = discharges.withColumn(
+            "patient_id", F.col("patient_id").cast("long")
+        )
     if "admission_id" in discharges.columns:
-        discharges = discharges.withColumn("admission_id", F.col("admission_id").cast("long"))
+        discharges = discharges.withColumn(
+            "admission_id", F.col("admission_id").cast("long")
+        )
 
     if "ward_id" in wards.columns:
         wards = wards.withColumn("ward_id", F.col("ward_id").cast("long"))

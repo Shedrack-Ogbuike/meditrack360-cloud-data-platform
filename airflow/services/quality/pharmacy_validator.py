@@ -25,8 +25,7 @@ class PharmacyDataValidator:
         if run_id is None:
             run_id = f"run_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
 
-        logger.info(
-            f"[PharmacyValidator] Validating bronze data - Run ID: {run_id}")
+        logger.info(f"[PharmacyValidator] Validating bronze data - Run ID: {run_id}")
 
         # Mock validation
         results = {

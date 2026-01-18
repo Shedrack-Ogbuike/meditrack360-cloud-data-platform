@@ -12,7 +12,6 @@ init_airflow.ps1
 plugins
 deploy_prod.yml
 *.env
-*.sql
 
 # Airflow
 airflow/logs/
