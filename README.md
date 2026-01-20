@@ -144,3 +144,5 @@ Includes basic data quality safeguards:
 * **SQL**
 
 ---
+
+![1](https://github.com/user-attachments/assets/69181193-6e1e-45fa-9a99-ff801c8bb2c2)
